@@ -46,6 +46,7 @@ def main():
                 params = []
             elif len(params)>1:
                 params = params[1:];
+                print('params', params)
             #print(f"Received: {value.split()}\r")
             if value.upper()=='*IDN?':
                 writeUSB(unique_id)
@@ -53,17 +54,22 @@ def main():
                 writeUSB(name)
             elif value.upper() == 'Q':
                 break;
-            elif value.upper()=='R?' or value.upper()=='RA?' or value.upper()=='LAST?':
+            #elif value.upper()=='R?' or value.upper()=='RA?' or value.upper()=='LAST?' or value.upper()=='BIAS?' or :
+            elif value.upper() in ['R?', 'RA?', 'LAST?', 'BIAS?', 'BIAS']:
                 if (len(params)>0):
                     #print(params);
                     channel = int(params[0])
+                    if value.upper()=='BIAS':
+                        cmd = 'BIAS '+params[1]
+                    else:
+                        cmd = value.upper();
                     if (channel>=0) and (channel<8):
                         #print("got R, channel:", channel)
                         uart = uart1 if channel & 4 else uart0
                         pinA = pinA1 if channel & 4 else pinA0
                         pinB = pinB1 if channel & 4 else pinB0
                         set_mux(pinA, pinB, channel & 3);  # Use lowest two bits
-                        cmd = value.upper() + '\n'
+                        cmd = cmd + '\n'
                         cmd = cmd.encode()
                         uart.write(cmd)
                         failed_counter = 0
