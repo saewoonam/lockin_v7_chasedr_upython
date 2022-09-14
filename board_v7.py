@@ -52,9 +52,11 @@ def readUart():
             doCommand(cmd, uartresponder)
 
 def doCommand(cmd, responder=print):
-    global ONCE, DEBUG, last
+    global ONCE, DEBUG, last, p9, counter
     #print('do Command', cmd)
     if len(cmd):  # respond to command
+        args = cmd.split();
+        cmd = args[0]
         if (cmd[0]=='Q'):
             responder('Got Q')
             exit(0)
@@ -68,6 +70,21 @@ def doCommand(cmd, responder=print):
             responder(f'{resp}')
         elif (cmd=="LAST?"):
             responder(f'{last}')
+        elif (cmd=="BIAS?"):
+            response = p9.value()
+            responder(f'{response}')
+        elif (cmd=="BIAS"):
+            if len(args)>1:
+                print('args', args);
+                channel = int(args[1])
+                if channel:
+                    p9.on()
+                else:
+                    p9.off()
+                counter = 0
+                responder("done")
+            else:
+                responder("bad channel for bias");
         elif (cmd=="DEBUG"):
             DEBUG = not DEBUG
             responder(f"DEBUG: {DEBUG}")
@@ -79,17 +96,18 @@ def doCommand(cmd, responder=print):
 print('name', __name__)
 if (__name__ == 'board_v7') or (__name__=='__main__'):
     p6 = Pin(26, Pin.OUT) # high = bias on
-    p7 = Pin(27, Pin.OUT) # low = low bias current
-    p8 = Pin(28, Pin.OUT) # low = low bias current
-    p9 = Pin(29, Pin.OUT)
+    p7 = Pin(27, Pin.OUT) # polarity 100k 
+    p8 = Pin(28, Pin.OUT) # polarity sensor
+    p9 = Pin(29, Pin.OUT) # low/high bias control
     
     p6.on()  # turn on bias
-    p7.on() # use low bias range
+    p7.on() 
     p8.on()
-    p9.off()
+    p9.on()  # low bias
     
     adc = HX710C(2, 6)
     conversion = 1e6 * 2.5 / (1<<24) / 128  # converts to uV
+    counter = 0
     
     def readN_reset(N, skip=4, reset=False):
         if reset:
@@ -118,8 +136,7 @@ if (__name__ == 'board_v7') or (__name__=='__main__'):
         
         return np.array(readings)
     def toggle678():
-        global last, alpha
-        counter = 0
+        global last, alpha, counter
         alpha = 0.2
         adc.sm.active(1)
         toggle_bias = True
@@ -151,7 +168,8 @@ if (__name__ == 'board_v7') or (__name__=='__main__'):
                 r = diff[1]/diff[0] * 100
                 if counter == 1:
                     ewa = r;
-                if (abs(offset[0])>8000):
+                #if (abs(offset[0])>8000):
+                if False:
                     # Don't update ewa if the offset is off.
                     #print(f'{counter} {r:6.4} {ewa:6.4} {offset[0]:>6.3} {offset[1]:>6.5} {inner_offset[0]:>6.3} {inner_offset[1]:>6.5}')
                     print(f'{counter} {time.time()} {r:6.2f} {ewa:6.2f} {offset[0]:>9.2f} {offset[1]:>9.2f} {inner_offset[0]:>9.2f} {inner_offset[1]:>9.2f}')
@@ -162,7 +180,7 @@ if (__name__ == 'board_v7') or (__name__=='__main__'):
                 else:
                     ewa = r*alpha + (1-alpha)*ewa                
                     #print(f'{counter} {r:6.4} {ewa:6.4} {offset[0]:>6.3} {offset[1]:>6.5} {inner_offset[0]:>6.3} {inner_offset[1]:>6.5}', end='\r')
-                    print(f'{counter} {time.time()} {r:6.4f} {ewa:6.4f} {offset[0]:>9.2f} {offset[1]:>9.2f} {inner_offset[0]:>9.2f} {inner_offset[1]:>9.2f}', end='\r')
+                    print(f'{counter} {time.time()} {r:6.4f} {ewa:6.4f} {diff} {offset[0]:>9.2f} {offset[1]:>9.2f} {inner_offset[0]:>9.2f} {inner_offset[1]:>9.2f}', end='\r')
                     toggle_bias = True
                 last = [counter, time.time(), r, ewa]
             #print(current_readings)
