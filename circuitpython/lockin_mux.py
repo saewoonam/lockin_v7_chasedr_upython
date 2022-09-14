@@ -46,7 +46,7 @@ def main():
                 params = []
             elif len(params)>1:
                 params = params[1:];
-                print('params', params)
+                #print('params', params)
             #print(f"Received: {value.split()}\r")
             if value.upper()=='*IDN?':
                 writeUSB(unique_id)
